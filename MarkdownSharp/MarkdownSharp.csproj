@@ -62,7 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Markdown.cs" />
-    <Compile Include="MarkdownOld.cs" />
+    <Compile Include="MarkdownOptions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

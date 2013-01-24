@@ -92,41 +92,6 @@ using System.Text.RegularExpressions;
 
 namespace MarkdownSharp
 {
-
-    public class MarkdownOptions
-    {
-        /// <summary>
-        /// when true, (most) bare plain URLs are auto-hyperlinked  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool AutoHyperlink { get; set; }
-        /// <summary>
-        /// when true, RETURN becomes a literal newline  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool AutoNewlines { get; set; }
-        /// <summary>
-        /// use ">" for HTML output, or " />" for XHTML output
-        /// </summary>
-        public string EmptyElementSuffix { get; set; }
-        /// <summary>
-        /// when true, problematic URL characters like [, ], (, and so forth will be encoded 
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool EncodeProblemUrlCharacters { get; set; }
-        /// <summary>
-        /// when false, email addresses will never be auto-linked  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool LinkEmails { get; set; }
-        /// <summary>
-        /// when true, bold and italic require non-word characters on either side  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool StrictBoldItalic { get; set; }
-    }
-
-
     /// <summary>
     /// Markdown is a text-to-HTML conversion tool for web writers. 
     /// Markdown allows you to write using an easy-to-read, easy-to-write plain text format, 
@@ -327,7 +292,7 @@ namespace MarkdownSharp
 
             var backslashPattern = "";
 
-            foreach (char c in @"\`*_{}[]()>#+-.!")
+            foreach (var c in @"\`*_{}[]()>#+-.!")
             {
                 var key = c.ToString(CultureInfo.InvariantCulture);
                 var hash = GetHashKey(key, isHtmlBlock: false);
@@ -431,17 +396,17 @@ namespace MarkdownSharp
         private string FormParagraphs(string text, bool unhash = true)
         {
             // split on two or more newlines
-            string[] grafs = _newlinesMultiple.Split(_newlinesLeadingTrailing.Replace(text, ""));
+            var grafs = _newlinesMultiple.Split(_newlinesLeadingTrailing.Replace(text, ""));
             
-            for (int i = 0; i < grafs.Length; i++)
+            for (var i = 0; i < grafs.Length; i++)
             {
                 if (grafs[i].StartsWith("\x1AH"))
                 {
                     // unhashify HTML blocks
                     if (unhash)
                     {
-                        int sanityCheck = 50; // just for safety, guard against an infinite loop
-                        bool keepGoing = true; // as long as replacements where made, keep going
+                        var sanityCheck = 50; // just for safety, guard against an infinite loop
+                        var keepGoing = true; // as long as replacements where made, keep going
                         while (keepGoing && sanityCheck > 0)
                         {
                             keepGoing = false;
@@ -622,7 +587,7 @@ namespace MarkdownSharp
             )?	
             ";
 
-            string content = RepeatString(@"
+            var content = RepeatString(@"
                 (?>
                   [^<]+			        # content without tag
                 |
@@ -641,7 +606,7 @@ namespace MarkdownSharp
                   )
                 )*", NestDepth);
 
-            string content2 = content.Replace(@"\2", @"\3");
+            var content2 = content.Replace(@"\2", @"\3");
 
             // First, look for nested blocks, e.g.:
             // 	<div>
@@ -654,7 +619,7 @@ namespace MarkdownSharp
             // the inner nested divs must be indented.
             // We need to do this before the next, more liberal match, because the next
             // match will start at the first `<div>` and stop at the first `</div>`.
-            string pattern = @"
+            var pattern = @"
             (?>
                   (?>
                     (?<=\n)     # Starting at the beginning of a line
@@ -736,8 +701,8 @@ namespace MarkdownSharp
 
         private string HtmlEvaluator(Match match)
         {
-            string text = match.Groups[1].Value;
-            string key = GetHashKey(text, isHtmlBlock: true);
+            var text = match.Groups[1].Value;
+            var key = GetHashKey(text, isHtmlBlock: true);
             _htmlBlocks[key] = text;
 
             return string.Concat("\n\n", key, "\n\n");
@@ -852,7 +817,7 @@ namespace MarkdownSharp
             return text;
         }
 
-        private string SaveFromAutoLinking(string s)
+        private static string SaveFromAutoLinking(string s)
         {
             return s.Replace("://", AutoLinkPreventionMarker);
         }
@@ -1299,7 +1264,7 @@ namespace MarkdownSharp
 
         private string CodeBlockEvaluator(Match match)
         {
-            string codeBlock = match.Groups[1].Value;
+            var codeBlock = match.Groups[1].Value;
 
             codeBlock = EncodeCode(Outdent(codeBlock));
             codeBlock = _newlinesLeadingTrailing.Replace(codeBlock, "");
@@ -1347,7 +1312,7 @@ namespace MarkdownSharp
 
         private string CodeSpanEvaluator(Match match)
         {
-            string span = match.Groups[2].Value;
+            var span = match.Groups[2].Value;
             span = Regex.Replace(span, @"^[ ]*", ""); // leading whitespace
             span = Regex.Replace(span, @"[ ]*$", ""); // trailing whitespace
             span = EncodeCode(span);
@@ -1479,15 +1444,15 @@ namespace MarkdownSharp
             return text;
         }
 
-        private string HyperlinkEvaluator(Match match)
+        private static string HyperlinkEvaluator(Match match)
         {
-            string link = match.Groups[1].Value;
+            var link = match.Groups[1].Value;
             return string.Format("<a href=\"{0}\">{0}</a>", link);
         }
 
         private string EmailEvaluator(Match match)
         {
-            string email = Unescape(match.Groups[1].Value);
+            var email = Unescape(match.Groups[1].Value);
 
             //
             //    Input: an email address, e.g. "foo@example.com"
@@ -1535,7 +1500,7 @@ namespace MarkdownSharp
         /// roughly 10% raw, 45% hex, 45% dec 
         /// note that @ is always encoded and : never is
         /// </summary>
-        private string EncodeEmailAddress(string addr)
+        private static string EncodeEmailAddress(string addr)
         {
             var sb = new StringBuilder(addr.Length * 5);
             var rand = new Random();
@@ -1557,7 +1522,7 @@ namespace MarkdownSharp
         /// <summary>
         /// Encode/escape certain Markdown characters inside code blocks and spans where they are literals
         /// </summary>
-        private string EncodeCode(string code)
+        private static string EncodeCode(string code)
         {
             return _codeEncoder.Replace(code, EncodeCodeEvaluator);
         }
@@ -1588,7 +1553,7 @@ namespace MarkdownSharp
         /// <summary>
         /// Encode any ampersands (that aren't part of an HTML entity) and left or right angle brackets
         /// </summary>
-        private string EncodeAmpsAndAngles(string s)
+        private static string EncodeAmpsAndAngles(string s)
         {
             s = _amps.Replace(s, "&amp;");
             s = _angles.Replace(s, "&lt;");
@@ -1627,7 +1592,7 @@ namespace MarkdownSharp
         /// <summary>
         /// escapes Bold [ * ] and Italic [ _ ] characters
         /// </summary>
-        private string EscapeBoldItalic(string s)
+        private static string EscapeBoldItalic(string s)
         {
             s = s.Replace("*", _escapeTable["*"]);
             s = s.Replace("_", _escapeTable["_"]);
@@ -1684,7 +1649,7 @@ namespace MarkdownSharp
 
             foreach (var token in tokens)
             {
-                string value = token.Value;
+                var value = token.Value;
 
                 if (token.Type == TokenType.Tag)
                 {
@@ -1709,13 +1674,13 @@ namespace MarkdownSharp
         /// makes sure text ends with a couple of newlines; 
         /// removes any blank lines (only spaces) in the text
         /// </summary>
-        private string Normalize(string text)
+        private static string Normalize(string text)
         {            
             var output = new StringBuilder(text.Length);
             var line = new StringBuilder();
-            bool valid = false;
+            var valid = false;
 
-            for (int i = 0; i < text.Length; i++)
+            for (var i = 0; i < text.Length; i++)
             {
                 switch (text[i])
                 {
@@ -1733,8 +1698,8 @@ namespace MarkdownSharp
                         }
                         break;
                     case '\t':
-                        int width = (TabWidth - line.Length % TabWidth);
-                        for (int k = 0; k < width; k++)
+                        var width = (TabWidth - line.Length % TabWidth);
+                        for (var k = 0; k < width; k++)
                             line.Append(' ');
                         break;
                     case '\x1A':
