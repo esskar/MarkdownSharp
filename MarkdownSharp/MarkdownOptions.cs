@@ -1,4 +1,6 @@
-﻿namespace MarkdownSharp
+﻿using System;
+
+namespace MarkdownSharp
 {
     public class MarkdownOptions
     {
@@ -11,7 +13,18 @@
         /// when true, RETURN becomes a literal newline  
         /// WARNING: this is a significant deviation from the markdown spec
         /// </summary>
-        public bool AutoNewlines { get; set; }
+        [Obsolete("Use AutoNewLines")]
+        public bool AutoNewlines 
+        {
+            get { return this.AutoNewLines; }
+            set { this.AutoNewLines = value; }
+        }
+
+        /// <summary>
+        /// when true, RETURN becomes a literal newline  
+        /// WARNING: this is a significant deviation from the markdown spec
+        /// </summary>
+        public bool AutoNewLines { get; set; }
         /// <summary>
         /// use ">" for HTML output, or " />" for XHTML output
         /// </summary>

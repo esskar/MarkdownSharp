@@ -21,6 +21,8 @@
  * History: Milan ported the Markdown processor to C#. He granted license to me so I can open source it
  * and let the community contribute to and improve MarkdownSharp.
  * 
+ * No copyright 2013 Sascha Kiefer (@esskar)
+ * Made some changes (specially cleanup, article specification and retrieving, as well as image retrieving)
  */
 
 #region Copyright and license
@@ -97,15 +99,15 @@ namespace MarkdownSharp
     /// Markdown allows you to write using an easy-to-read, easy-to-write plain text format, 
     /// then convert it to structurally valid XHTML (or HTML).
     /// </summary>
-    public class Markdown
+    public class Markdown : MarkdownOptions
     {
         /// <summary>
         /// current version of MarkdownSharp;  
-        /// see http://code.google.com/p/markdownsharp/ for the latest code or to contribute
+        /// see https://github.com/esskar/MarkdownSharp for the latest code or to contribute
         /// </summary>
         public string Version
         {
-            get { return "1.14"; }
+            get { return "1.15"; }
         }
 
         #region Constructors and Options
@@ -172,56 +174,13 @@ namespace MarkdownSharp
         public Markdown(MarkdownOptions options)
         {
             this.AutoHyperlink = options.AutoHyperlink;
-            this.AutoNewLines = options.AutoNewlines;
+            this.AutoNewLines = options.AutoNewLines;
             this.EmptyElementSuffix = options.EmptyElementSuffix;
             this.EncodeProblemUrlCharacters = options.EncodeProblemUrlCharacters;
             this.LinkEmails = options.LinkEmails;
             this.StrictBoldItalic = options.StrictBoldItalic;
             this.SupportArticles = options.SupportArticles;
         }
-
-
-        /// <summary>
-        /// use ">" for HTML output, or " />" for XHTML output
-        /// </summary>
-        public string EmptyElementSuffix { get; set; }
-
-        /// <summary>
-        /// when false, email addresses will never be auto-linked  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool LinkEmails { get; set; }
-
-        /// <summary>
-        /// when true, bold and italic require non-word characters on either side  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool StrictBoldItalic { get; set; }
-
-        /// <summary>
-        /// when true, RETURN becomes a literal newline  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool AutoNewLines { get; set; }
-
-        /// <summary>
-        /// when true, (most) bare plain URLs are auto-hyperlinked  
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool AutoHyperlink { get; set; }
-
-        /// <summary>
-        /// when true, problematic URL characters like [, ], (, and so forth will be encoded 
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool EncodeProblemUrlCharacters { get; set; }
-
-        /// <summary>
-        /// when true, lines starting with $ will be wrapped into <article>...</article>
-        /// WARNING: this is a significant deviation from the markdown spec
-        /// </summary>
-        public bool SupportArticles { get; set; }
-
         #endregion
 
         private enum TokenType { Text, Tag }
@@ -259,6 +218,9 @@ namespace MarkdownSharp
         private readonly Dictionary<string, string> _titles = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _htmlBlocks = new Dictionary<string, string>();
 
+        private readonly List<string> _articles = new List<string>();
+        private readonly Dictionary<string, string> _images = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+
         private int _listLevel;
         private const string AutoLinkPreventionMarker = "\x1AP"; // temporarily replaces "://" where auto-linking shouldn't happen;
 
@@ -278,7 +240,7 @@ namespace MarkdownSharp
             foreach (var c in @"\`*_{}[]()>#+-.!")
             {
                 var key = c.ToString(CultureInfo.InvariantCulture);
-                var hash = GetHashKey(key, isHtmlBlock: false);
+                var hash = GetHashKey(key, false);
                 _escapeTable.Add(key, hash);
                 _invertedEscapeTable.Add(hash, key);
                 _backslashEscapeTable.Add(@"\" + key, hash);
@@ -286,7 +248,79 @@ namespace MarkdownSharp
             }
 
             _backslashEscapes = new Regex(backslashPattern.Substring(0, backslashPattern.Length - 1), RegexOptions.Compiled);
-        }        
+        }
+
+        /// <summary>
+        /// Gets the article count.
+        /// </summary>
+        /// <value>
+        /// The article count.
+        /// </value>
+        public int ArticleCount
+        {
+            get { return _articles.Count; }
+        }
+
+        /// <summary>
+        /// Gets the article.
+        /// </summary>
+        /// <param name="index">The index.</param>
+        /// <param name="transformed">if set to <c>true</c> markdown inside the article will be replaced, if <c>false</c> otherwise.</param>
+        /// <returns></returns>
+        /// <exception cref="System.IndexOutOfRangeException"></exception>
+        public string GetArticle(int index, bool transformed = true)
+        {
+            if(index < 0 || index >= this.ArticleCount)
+                throw new IndexOutOfRangeException();
+
+            if (!transformed)
+                return _articles[index];
+
+            var markdown = new Markdown(this);
+            return markdown.Transform(_articles[index]);
+        }
+
+        /// <summary>
+        /// Gets the articles.
+        /// </summary>
+        /// <param name="transformed">if set to <c>true</c> markdown inside the article will be replaced, if <c>false</c> otherwise.</param>
+        /// <returns></returns>
+        public string[] GetArticles(bool transformed = true)
+        {
+            if (!transformed)
+                return _articles.ToArray();
+
+            var markdown = new Markdown(this);
+
+            var retval = new string[_articles.Count];
+            for (var i = 0; i < _articles.Count; ++i)
+                retval[i] = markdown.Transform(_articles[i]);
+            return retval;
+        }
+
+        /// <summary>
+        /// Gets the image count.
+        /// </summary>
+        /// <value>
+        /// The image count.
+        /// </value>
+        public int ImageCount 
+        {
+            get { return _images.Count; }
+        }
+
+        /// <summary>
+        /// Gets the image by alt-text
+        /// </summary>
+        /// <param name="altText">The alt text.</param>
+        /// <returns></returns>
+        public string GetImage(string altText)
+        {
+            string image;
+            _images.TryGetValue(altText, out image);
+            return image;
+        }
+
 
         /// <summary>
         /// Transforms the provided Markdown-formatted text to HTML;  
@@ -426,6 +460,8 @@ namespace MarkdownSharp
             // from other articles when generating a page which contains more than
             // one article (e.g. an index page that shows the N most recent
             // articles):
+            _articles.Clear();
+            _images.Clear();
             _urls.Clear();
             _titles.Clear();
             _htmlBlocks.Clear();
@@ -695,7 +731,7 @@ namespace MarkdownSharp
         private static string GetHashKey(string s, bool isHtmlBlock)
         {
             var delim = isHtmlBlock ? 'H' : 'E';
-            return "\x1A" + delim +  Math.Abs(s.GetHashCode()).ToString(CultureInfo.InvariantCulture) + delim;
+            return string.Format("\x1A{0}{1}{0}", delim,  Math.Abs(s.GetHashCode()));
         }
 
         private static readonly Regex _htmlTokens = new Regex(@"
@@ -965,7 +1001,9 @@ namespace MarkdownSharp
 
             var url = _urls[linkId];
             url = EncodeProblemUrlChars(url);
-            url = EscapeBoldItalic(url);                
+            url = EscapeBoldItalic(url);
+
+            _images[altText] = url;
 
             var result = string.Format("<img src=\"{0}\" alt=\"{1}\"", url, altText);
             if (_titles.ContainsKey(linkId))
@@ -1384,20 +1422,22 @@ namespace MarkdownSharp
 
         private string ArticleEvaluator(Match match)
         {
-            var bq = match.Groups[1].Value;
+            var article = match.Groups[1].Value;
 
-            bq = Regex.Replace(bq, @"^[ ]*\$[ ]?", "", RegexOptions.Multiline);      // trim one level of quoting
-            bq = Regex.Replace(bq, @"^[ ]+$", "", RegexOptions.Multiline);           // trim whitespace-only lines
-            bq = RunBlockGamut(bq);                                                  // recurse
+            article = Regex.Replace(article, @"^[ ]*\$[ ]?", "", RegexOptions.Multiline);      // trim one level of quoting
+            article = Regex.Replace(article, @"^[ ]+$", "", RegexOptions.Multiline);           // trim whitespace-only lines
+            article = RunBlockGamut(article);                                                  // recurse
 
-            bq = Regex.Replace(bq, @"^", "  ", RegexOptions.Multiline);
+            article = Regex.Replace(article, @"^", "  ", RegexOptions.Multiline);
 
             // These leading spaces screw with <pre> content, so we need to fix that:
-            bq = Regex.Replace(bq, @"(\s*<pre>.+?</pre>)", ArticleEvaluator2, RegexOptions.IgnorePatternWhitespace | RegexOptions.Singleline);
+            article = Regex.Replace(article, @"(\s*<pre>.+?</pre>)", ArticleEvaluator2, RegexOptions.IgnorePatternWhitespace | RegexOptions.Singleline);
 
-            bq = string.Format("<article>\n{0}\n</article>", bq);
-            var key = GetHashKey(bq, true);
-            _htmlBlocks[key] = bq;
+            _articles.Add(article);
+
+            article = string.Format("<article>\n{0}\n</article>", article);
+            var key = GetHashKey(article, true);
+            _htmlBlocks[key] = article;
 
             return "\n\n" + key + "\n\n";
         }
@@ -1729,7 +1769,6 @@ namespace MarkdownSharp
             for (var i = 0; i < count; i++)
                 sb.Append(text);
             return sb.ToString();
-        }
-
+        }        
     }
 }
