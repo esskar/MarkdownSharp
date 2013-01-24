@@ -31,5 +31,10 @@
         /// WARNING: this is a significant deviation from the markdown spec
         /// </summary>
         public bool StrictBoldItalic { get; set; }
+        /// <summary>
+        /// when true, lines starting with $ will be wrapped into <article>...</article>
+        /// WARNING: this is a significant deviation from the markdown spec
+        /// </summary>
+        public bool SupportArticles { get; set; }
     }
 }

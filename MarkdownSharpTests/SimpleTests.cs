@@ -63,19 +63,27 @@ namespace MarkdownSharpTests
             Assert.AreEqual(expected, actual);
         }
 
-        /*
         [Test]
-        public void LinkBare_withAutoHyperLink()
+        public void LinkBareWithAutoHyperLink()
         {
-            //TODO: implement some way of setting AutoHyperLink programmatically
-            //to run this test now, just change the _autoHyperlink constant in Markdown.cs
-            string input = "Have you visited http://www.example.com before?";
-            string expected = "<p>Have you visited <a href=\"http://www.example.com\">http://www.example.com</a> before?</p>\n";
+            var autoHyperLink = _target.AutoHyperlink;
+            try
+            {
+                _target.AutoHyperlink = true;
 
-            string actual = m.Transform(input);
+                const string input = "Have you visited http://www.example.com before?";
+                const string expected =
+                    "<p>Have you visited <a href=\"http://www.example.com\">http://www.example.com</a> before?</p>\n";
 
-            Assert.AreEqual(expected, actual);
-        }*/
+                var actual = _target.Transform(input);
+
+                Assert.AreEqual(expected, actual);
+            }
+            finally
+            {
+                _target.AutoHyperlink = autoHyperLink;
+            }
+        }
 
         [Test]
         public void LinkAlt()
@@ -97,6 +105,48 @@ namespace MarkdownSharpTests
             var actual = _target.Transform(input);
 
             Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void ArticleEnabled()
+        {
+            var supportArticles = _target.SupportArticles;
+            try
+            {
+                _target.SupportArticles = true;
+
+                const string input = "Here is an article\n\n$ Hello sir!\n";
+                const string expected = "<p>Here is an article</p>\n\n<article>\n  <p>Hello sir!</p>\n</article>\n";
+
+                var actual = _target.Transform(input);
+
+                Assert.AreEqual(expected, actual);
+            }
+            finally
+            {
+                _target.SupportArticles = supportArticles;
+            }            
+        }
+
+        [Test]
+        public void ArticleDisabled()
+        {
+            var supportArticles = _target.SupportArticles;
+            try
+            {
+                _target.SupportArticles = false;
+
+                const string input = "Here is an article\n\n$ Hello sir!\n";
+                const string expected = "<p>Here is an article</p>\n\n<p>$ Hello sir!</p>\n";
+
+                var actual = _target.Transform(input);
+
+                Assert.AreEqual(expected, actual);
+            }
+            finally
+            {
+                _target.SupportArticles = supportArticles;
+            }
         }
 
         [Test]

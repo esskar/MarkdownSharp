@@ -11,26 +11,26 @@ using NUnit.Framework;
 namespace MarkdownSharpTests 
 {
     [TestFixture]
-    public class MDTestTests : BaseTest
+    public class MdTestTests : BaseTest
     {
-        const string folder = "testfiles.mdtest_1._1";
+        const string Folder = "testfiles.mdtest_1._1";
 
 
         private static IEnumerable<TestCaseData> GetTests()
         {
-            Markdown m = new Markdown();
-            Assembly assembly = Assembly.GetAssembly(typeof(BaseTest));
-            string namespacePrefix = String.Concat(assembly.GetName().Name, '.', folder);
-            string[] resourceNames = assembly.GetManifestResourceNames();
+            var m = new Markdown();
+            var assembly = Assembly.GetAssembly(typeof(BaseTest));
+            var namespacePrefix = String.Concat(assembly.GetName().Name, '.', Folder);
+            var resourceNames = assembly.GetManifestResourceNames();
             
             Func<string, string> getResourceFileContent = filename =>
             {
-                using (Stream stream = assembly.GetManifestResourceStream(filename))
+                using (var stream = assembly.GetManifestResourceStream(filename))
                 {
                     if (stream == null)
                         return null;
 
-                    using (StreamReader streamReader = new StreamReader(stream))
+                    using (var streamReader = new StreamReader(stream))
                         return streamReader.ReadToEnd();
                 }
             };

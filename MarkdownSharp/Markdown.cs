@@ -105,7 +105,7 @@ namespace MarkdownSharp
         /// </summary>
         public string Version
         {
-            get { return "1.13"; }
+            get { return "1.14"; }
         }
 
         #region Constructors and Options
@@ -159,6 +159,9 @@ namespace MarkdownSharp
                     case "Markdown.StrictBoldItalic":
                         this.StrictBoldItalic = Convert.ToBoolean(settings[key]);
                         break;
+                    case "Markdown.SupportArticles":
+                        this.SupportArticles = Convert.ToBoolean(settings[key]);
+                        break;
                 }
             }
         }
@@ -174,6 +177,7 @@ namespace MarkdownSharp
             this.EncodeProblemUrlCharacters = options.EncodeProblemUrlCharacters;
             this.LinkEmails = options.LinkEmails;
             this.StrictBoldItalic = options.StrictBoldItalic;
+            this.SupportArticles = options.SupportArticles;
         }
 
 
@@ -211,6 +215,12 @@ namespace MarkdownSharp
         /// WARNING: this is a significant deviation from the markdown spec
         /// </summary>
         public bool EncodeProblemUrlCharacters { get; set; }
+
+        /// <summary>
+        /// when true, lines starting with $ will be wrapped into <article>...</article>
+        /// WARNING: this is a significant deviation from the markdown spec
+        /// </summary>
+        public bool SupportArticles { get; set; }
 
         #endregion
 
@@ -316,6 +326,7 @@ namespace MarkdownSharp
             text = DoHorizontalRules(text);
             text = DoLists(text);
             text = DoCodeBlocks(text);
+            text = DoArticles(text);
             text = DoBlockQuotes(text);
 
             // We already ran HashHTMLBlocks() before, in Markdown(), but that
@@ -400,7 +411,7 @@ namespace MarkdownSharp
                 }
                 else
                 {
-                    // do span level processing inside the block, then wrap result in <p> tags
+                    // do span level processing inside the block, then wrap result in <p> tags                    
                     grafs[i] = _leadingWhitespace.Replace(RunSpanGamut(grafs[i]), "<p>") + "</p>";
                 }
             }
@@ -1349,6 +1360,49 @@ namespace MarkdownSharp
         }
 
         private static string BlockQuoteEvaluator2(Match match)
+        {
+            return Regex.Replace(match.Groups[1].Value, @"^  ", "", RegexOptions.Multiline);
+        }
+
+        private static readonly Regex _article = new Regex(@"
+            (                           # Wrap whole match in $1
+                (
+                ^[ ]*\$[ ]?             # '$' at the start of a line
+                    .+\n                # rest of the first line
+                (.+\n)*                 # subsequent consecutive lines
+                \n*                     # blanks
+                )+
+            )", RegexOptions.IgnorePatternWhitespace | RegexOptions.Multiline | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Turn Markdown $ quoted blocks into HTML article blocks
+        /// </summary>
+        private string DoArticles(string text)
+        {
+            return this.SupportArticles ? _article.Replace(text, ArticleEvaluator) : text;
+        }
+
+        private string ArticleEvaluator(Match match)
+        {
+            var bq = match.Groups[1].Value;
+
+            bq = Regex.Replace(bq, @"^[ ]*\$[ ]?", "", RegexOptions.Multiline);      // trim one level of quoting
+            bq = Regex.Replace(bq, @"^[ ]+$", "", RegexOptions.Multiline);           // trim whitespace-only lines
+            bq = RunBlockGamut(bq);                                                  // recurse
+
+            bq = Regex.Replace(bq, @"^", "  ", RegexOptions.Multiline);
+
+            // These leading spaces screw with <pre> content, so we need to fix that:
+            bq = Regex.Replace(bq, @"(\s*<pre>.+?</pre>)", ArticleEvaluator2, RegexOptions.IgnorePatternWhitespace | RegexOptions.Singleline);
+
+            bq = string.Format("<article>\n{0}\n</article>", bq);
+            var key = GetHashKey(bq, true);
+            _htmlBlocks[key] = bq;
+
+            return "\n\n" + key + "\n\n";
+        }
+
+        private static string ArticleEvaluator2(Match match)
         {
             return Regex.Replace(match.Groups[1].Value, @"^  ", "", RegexOptions.Multiline);
         }
