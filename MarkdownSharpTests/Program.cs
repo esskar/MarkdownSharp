@@ -9,7 +9,7 @@ namespace MarkdownSharpTests
     class Program
     {
 
-        static void Main(string[] args)
+        static void Main()
         {
 
             UnitTests();
@@ -53,29 +53,6 @@ namespace MarkdownSharpTests
         }
 
         /// <summary>
-        /// mini test harness for one-liner Markdown bug repros 
-        /// for anything larger, I recommend using the folder based approach and Test()
-        /// </summary>
-        private static void AdHocTest()
-        {
-            var m = new MarkdownSharp.Markdown();
-            //var m = new MarkdownSharp.MarkdownOld();
-
-            //string input = "<div class=\"inlinepage\">\n<div class=\"toggleableend\">\nfoo\n</div>\n</div>";
-            //string input = "Same thing but with paragraphs:\n\n1. First\n\n2. Second:\n\t* Fee\n\t* Fie\n\t* Foe\n\n3. Third\n\n";
-            //string input = "*\tthis\n\n\t*\tsub\n\n\tthat";
-            //string input = "1. one\n\n        code<t>\n\n2. two\n\n        code<t>\n            indented-12-spaces<t>\n\n";
-            string input = "\n\n    code<t>\n";
-
-            string output = m.Transform(input);
-
-            Console.WriteLine("input:");
-            Console.WriteLine(input);
-            Console.WriteLine("output:");
-            Console.WriteLine(output);
-        }
-
-        /// <summary>
         /// iterates through all the test files in a given folder and generates file-based output 
         /// this is essentially the same as running the unit tests, but with diff-able results
         /// </summary>
@@ -99,28 +76,25 @@ namespace MarkdownSharpTests
             Console.WriteLine(@"MarkdownSharp v" + m.Version + @" test run on " + Path.DirectorySeparatorChar + testfolder);
             Console.WriteLine();
 
-            string path = Path.Combine(ExecutingAssemblyPath, Path.Combine("testfiles", testfolder));
-            string output;
-            string expected;
-            string actualpath;
+            var path = Path.Combine(ExecutingAssemblyPath, Path.Combine("testfiles", testfolder));
 
-            int ok = 0;
-            int okalt = 0;
-            int err = 0;
-            int errnew = 0;
-            int total = 0;            
+            var ok = 0;
+            var okalt = 0;
+            var err = 0;
+            var errnew = 0;
+            var total = 0;            
 
             foreach (var file in Directory.GetFiles(path, "*.text"))
             {
 
-                expected = FileContents(Path.ChangeExtension(file, "html"));                
-                output = m.Transform(FileContents(file));
+                var expected = FileContents(Path.ChangeExtension(file, "html"));                
+                var output = m.Transform(FileContents(file));
 
-                actualpath = Path.ChangeExtension(file, GetCrc16(output) + ".actual.html");
+                var actualpath = Path.ChangeExtension(file, GetCrc16(output) + ".actual.html");
                 
                 total++;
 
-                Console.Write(String.Format("{0:000} {1,-55}", total, Path.GetFileNameWithoutExtension(file)));
+                Console.Write("{0:000} {1,-55}", total, Path.GetFileNameWithoutExtension(file));
 
                 if (output == expected)
                 {
@@ -161,14 +135,13 @@ namespace MarkdownSharpTests
             else
                 Console.WriteLine();
 
-            if (errnew > 0)
-            {
-                Console.WriteLine();
-                Console.WriteLine("for each mismatch, an *.actual.html file was generated in");
-                Console.WriteLine(path);
-                Console.WriteLine("to troubleshoot mismatches, use a diff tool on *.html and *.actual.html");
-            }
+            if (errnew <= 0) 
+                return;
 
+            Console.WriteLine();
+            Console.WriteLine("for each mismatch, an *.actual.html file was generated in");
+            Console.WriteLine(path);
+            Console.WriteLine("to troubleshoot mismatches, use a diff tool on *.html and *.actual.html");
         }
 
         /// <summary>
@@ -232,9 +205,11 @@ namespace MarkdownSharpTests
         {
             get
             {
-                string path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
                 // removes executable part
                 path = Path.GetDirectoryName(path);
+                if(path == null)
+                    throw new InvalidOperationException("Failed to extract directory part.");
                 // we're typically in \bin\debug or bin\release so move up two folders
                 path = Path.Combine(path, "..");
                 path = Path.Combine(path, "..");
@@ -296,13 +271,17 @@ namespace MarkdownSharpTests
         {
             log4net.Config.XmlConfigurator.Configure();
 
-            string testAssemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var testAssemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
 
             Console.WriteLine("Running tests in {0}\n", testAssemblyLocation);
 
             var p = new Process();
 
-            string path = Path.Combine(Path.GetDirectoryName(testAssemblyLocation), @"nunit-console\nunit-console.exe");
+            var testAssemblyPath = Path.GetDirectoryName(testAssemblyLocation);
+            if(testAssemblyPath == null)
+                throw new InvalidOperationException("Failed to extract directory path.");
+
+            var path = Path.Combine(testAssemblyPath, @"nunit-console\nunit-console.exe");
             path = path.Replace(@"\bin\Debug", "");
             path = path.Replace(@"\bin\Release", "");
             p.StartInfo.FileName = path;
@@ -312,10 +291,10 @@ namespace MarkdownSharpTests
             p.StartInfo.UseShellExecute = false;
 
             p.StartInfo.RedirectStandardOutput = true;
-            p.OutputDataReceived += new DataReceivedEventHandler(p_DataReceived);
+            p.OutputDataReceived += OnDataReceived;
 
             p.StartInfo.RedirectStandardError = true;
-            p.ErrorDataReceived += new DataReceivedEventHandler(p_DataReceived);
+            p.ErrorDataReceived += OnDataReceived;
 
             p.Start();
 
@@ -328,7 +307,7 @@ namespace MarkdownSharpTests
             Console.WriteLine();
         }
 
-        private static void p_DataReceived(object sender, DataReceivedEventArgs e)
+        private static void OnDataReceived(object sender, DataReceivedEventArgs e)
         {
             if (string.IsNullOrEmpty(e.Data)) return;
             Console.WriteLine(e.Data);
