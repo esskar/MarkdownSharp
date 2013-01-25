@@ -334,9 +334,9 @@ namespace MarkdownSharp
         /// </remarks>
         public string Transform(string text)
         {
-            if (String.IsNullOrEmpty(text)) return "";
+            this.Setup();
 
-            Setup();
+            if (String.IsNullOrEmpty(text)) return "";            
 
             text = Normalize(text);
            
@@ -344,8 +344,6 @@ namespace MarkdownSharp
             text = StripLinkDefinitions(text);
             text = RunBlockGamut(text);
             text = Unescape(text);
-
-            Cleanup();
 
             return text + "\n";
         }
@@ -467,12 +465,7 @@ namespace MarkdownSharp
             _htmlBlocks.Clear();
             _listLevel = 0;
         }
-
-        private void Cleanup()
-        {
-            Setup();
-        }
-
+        
         private static string _nestedBracketsPattern;
 
         /// <summary>

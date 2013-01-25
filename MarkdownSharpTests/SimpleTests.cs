@@ -119,8 +119,8 @@ namespace MarkdownSharpTests
                 const string expected = "<p>Here is an article</p>\n\n<article>\n  <p>Hello sir!</p>\n</article>\n";
 
                 var actual = _target.Transform(input);
-
                 Assert.AreEqual(expected, actual);
+                Assert.AreEqual(1, _target.ArticleCount, "ArticelCount mismatch");
             }
             finally
             {
@@ -142,6 +142,7 @@ namespace MarkdownSharpTests
                 var actual = _target.Transform(input);
 
                 Assert.AreEqual(expected, actual);
+                Assert.AreEqual(0, _target.ArticleCount, "ArticelCount mismatch");
             }
             finally
             {
