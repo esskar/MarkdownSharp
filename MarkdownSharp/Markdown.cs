@@ -1421,7 +1421,7 @@ namespace MarkdownSharp
             article = Regex.Replace(article, @"^[ ]+$", "", RegexOptions.Multiline);           // trim whitespace-only lines
             article = RunBlockGamut(article);                                                  // recurse
 
-            article = Regex.Replace(article, @"^", "  ", RegexOptions.Multiline);
+            //article = Regex.Replace(article, @"^", "  ", RegexOptions.Multiline);
 
             // These leading spaces screw with <pre> content, so we need to fix that:
             article = Regex.Replace(article, @"(\s*<pre>.+?</pre>)", ArticleEvaluator2, RegexOptions.IgnorePatternWhitespace | RegexOptions.Singleline);

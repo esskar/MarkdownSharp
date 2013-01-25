@@ -116,7 +116,7 @@ namespace MarkdownSharpTests
                 _target.SupportArticles = true;
 
                 const string input = "Here is an article\n\n$ Hello sir!\n";
-                const string expected = "<p>Here is an article</p>\n\n<article>\n  <p>Hello sir!</p>\n</article>\n";
+                const string expected = "<p>Here is an article</p>\n\n<article>\n<p>Hello sir!</p>\n</article>\n";
 
                 var actual = _target.Transform(input);
                 Assert.AreEqual(expected, actual);
